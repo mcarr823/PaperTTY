@@ -388,6 +388,8 @@ class PaperTTY:
     def showtext(self, text, fill, cursor=None, portrait=False, flipx=False, flipy=False, oldimage=None, oldtext=None, oldcursor=None):
         """Draw a string on the screen"""
         if self.ready():
+
+            t = time.process_time()
             
             #If partial updates are supported, and this isn't our first render (ie. oldtext is defined), then try
             #to run showtext_line_by_line() instead.
@@ -398,6 +400,8 @@ class PaperTTY:
                 image = self.showtext_line_by_line(text=text, fill=fill, cursor=cursor, portrait=portrait, flipx=flipx, flipy=flipy, oldimage=oldimage, oldtext=oldtext, oldcursor=oldcursor)
                 if image != False:
                     return image
+
+            print("\nFinished checking line-by-line: "+str(time.process_time() - t))
 
             # set order of h, w according to orientation
             image = Image.new('1', (self.driver.width, self.driver.height) if portrait else (
@@ -436,9 +440,13 @@ class PaperTTY:
                 # crop the altered region and draw it on the display
                 if diff_bbox:
                     self.driver.draw(diff_bbox[0], diff_bbox[1], image.crop(diff_bbox))
+
+                print("\nFinished partial draw: "+str(time.process_time() - t))
             else:
                 # if no previous image, draw the entire display
                 self.driver.draw(0, 0, image)
+
+                print("\nFinished full draw: "+str(time.process_time() - t))
             return image
         else:
             self.error("Display not ready")
@@ -450,6 +458,8 @@ class PaperTTY:
            This function serves as an alternative to showtext() and aims to be more efficient for small changes
            by comparing string values instead of diffing images.
         """
+
+        t = time.process_time()
 
         #Grab the oldtext (text from the previous render) and text (text from current render), then split them
         #up based on a newline delimiter.
@@ -528,6 +538,8 @@ class PaperTTY:
                     cursorIsOnThisLine = False
                     cursorWasOnThisLine = False
 
+            print("\nStarting line "+str(i)+": "+str(time.process_time() - t))
+            
             if not cursorIsOnThisLine and not cursorWasOnThisLine and oldval == newval:
                 
                 #If the cursor hasn't moved to/from this line and the text hasn't changed,
@@ -555,6 +567,8 @@ class PaperTTY:
                     else:
                         self.draw_line_cursor(newcursor, draw)
 
+                print("Draw text "+str(time.process_time() - t))
+                
                 # rotate image if using landscape
                 if not portrait:
                     image = image.rotate(90, expand=True)
@@ -569,6 +583,10 @@ class PaperTTY:
                 #Note: x is currently hard-coded to 0, but it could be set to something else later if we implement partial line updates
                 imagesToDraw.append([0, y, image])
                 
+                print("y: "+str(y))
+
+
+        print("Start drawing "+str(time.process_time() - t))
 
         #If oldimage is defined, update it by drawing the new frames onto it.
         #If not, create a new full-screen image.
@@ -583,6 +601,7 @@ class PaperTTY:
             oldimage.paste(arr[2], (arr[0], arr[1])) #for the return data
             self.driver.draw(arr[0], arr[1], arr[2])
 
+        print("Finished drawing "+str(time.process_time() - t))
         return oldimage
     
     def clear(self):
