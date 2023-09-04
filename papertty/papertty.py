@@ -385,9 +385,20 @@ class PaperTTY:
                 previous_vnc_image = new_vnc_image.copy()
                 time.sleep(float(sleep))
 
-    def showtext(self, text, fill, cursor=None, portrait=False, flipx=False, flipy=False, oldimage=None):
+    def showtext(self, text, fill, cursor=None, portrait=False, flipx=False, flipy=False, oldimage=None, oldtext=None, oldcursor=None):
         """Draw a string on the screen"""
         if self.ready():
+            
+            #If partial updates are supported, and this isn't our first render (ie. oldtext is defined), then try
+            #to run showtext_line_by_line() instead.
+            #showtext_line_by_line() should be much more efficient for small text changes.
+            #It will return False if too much has changed, in which case we will revert back to the usual way of
+            #comparing frames.
+            if oldtext and self.driver.supports_partial and self.partial:
+                image = self.showtext_line_by_line(text=text, fill=fill, cursor=cursor, portrait=portrait, flipx=flipx, flipy=flipy, oldimage=oldimage, oldtext=oldtext, oldcursor=oldcursor)
+                if image != False:
+                    return image
+
             # set order of h, w according to orientation
             image = Image.new('1', (self.driver.width, self.driver.height) if portrait else (
                 self.driver.height, self.driver.width),
@@ -431,6 +442,148 @@ class PaperTTY:
             return image
         else:
             self.error("Display not ready")
+
+
+
+    def showtext_line_by_line(self, text, fill, cursor, portrait, flipx, flipy, oldimage, oldtext, oldcursor):
+        """Draw a string on the screen one line at a time.
+           This function serves as an alternative to showtext() and aims to be more efficient for small changes
+           by comparing string values instead of diffing images.
+        """
+
+        #Grab the oldtext (text from the previous render) and text (text from current render), then split them
+        #up based on a newline delimiter.
+        #This is so we can compare the previous state of the text to the current state of the text line by line
+        #and only redraw the lines which have actually changed.
+        oldlines = oldtext.split('\n')
+        newlines = text.split('\n')
+
+        #This is the height of each row of text
+        height = self.font_height
+        
+        #This is a list of images (lines of text) to draw.
+        #Currently it should only be one or two lines of text, but we're using a list anyway for flexibility.
+        imagesToDraw = []
+        
+        #maxRedraw is the maximum number of lines this function should consider drawing.
+        #If there are more than maxRedraw lines which need drawing, abort and let showtext() handle the
+        #draw event instead.
+        #This is because of the overhead involved which each individual write to the GPIO pins, which mean
+        #that once we cross a certain threshold, showtext() becomes faster than this function.
+        #2 is a somewhat arbitrary limit based on the number of lines which are likely to change during
+        #common operations, such as typing a command or having text overflow to the next line.
+        #There might be a better way to come up with this number rather than a hard-coded limit.
+        maxRedraw = 2
+
+        #Iterate each row and (potentially) draw it.
+        #Unlike when doing a draw in showtext(), here we actually do want to iterate each and every line.
+        #This is because showtext() draws full-screen images, essentially scrubbing the screen, whereas
+        #this function only draws one or two rows.
+        #So an empty line in this function might need to be drawn in order to overwrite the non-empty line
+        #which was there previously.
+        for i in range(self.rows):
+            
+            newval = newlines[i] if i < len(newlines) else ''
+            oldval = oldlines[i] if i < len(oldlines) else ''
+
+            #Calculate the y coordinate based on the row number and font height.
+            #If flipy is set, count the rows backwards, since we want to draw from the "end" (which flipy
+            #moves to the start of the screen) instead.
+            if flipy:
+
+                #Calculate the gap between the last row and the edge of the screen, then add it to y.
+                #This is because we want the gap between the "last" row (which, when flipped, becomes the
+                #first row) to be at the bottom of the screen, not the top.
+                offset_y = (self.driver.height if portrait else self.driver.width) % self.font_height
+                
+                #We want to count backwards from 1 row BEFORE self.rows, since that's the maximum index
+                #we would actually draw at when counting forwards.
+                maxRowIndex = self.rows - 1
+
+                y = (maxRowIndex - i) * height
+                y += offset_y
+            else:
+                y = i * height
+
+            #Use these 2 variables to check if the cursor has moved from/to the current line
+            cursorIsOnThisLine = False
+            cursorWasOnThisLine = False
+
+            # If the cursor is on this line, force a redraw
+            if cursor and self.cursor:
+                cur_y = cursor[1]
+                if cur_y == i:
+                    cursorIsOnThisLine = True
+
+            # Also, if the cursor WAS on this line during the last render, force a redraw of this line
+            if oldcursor:
+                cur_y = oldcursor[1]
+                if cur_y == i:
+                    cursorWasOnThisLine = True
+
+            # ...Unless the cursor position and the text haven't actually changed.
+            # In which case, don't bother redrawing it
+            if cursorIsOnThisLine and cursorWasOnThisLine:
+                if oldcursor[0] == cursor[0] and oldval == newval:
+                    cursorIsOnThisLine = False
+                    cursorWasOnThisLine = False
+
+            if not cursorIsOnThisLine and not cursorWasOnThisLine and oldval == newval:
+                
+                #If the cursor hasn't moved to/from this line and the text hasn't changed,
+                #then there's nothing to do for this line. Just skip it
+                pass
+
+            else:
+
+                #If we've already hit the limit for the number of lines to redraw, don't add any more.
+                #Instead, stop executing this function and return False
+                if len(imagesToDraw) == maxRedraw:
+                    return False
+
+                #draw the text
+                image = Image.new('1', (self.driver.width, height) if portrait else (height, self.driver.width), self.white)
+                draw = ImageDraw.Draw(image)
+                draw.text((0, 0), newval, font=self.font, fill=fill, spacing=self.spacing)
+
+
+                #Draw the cursor, if it's on this line
+                if cursorIsOnThisLine:
+                    newcursor = (cursor[0], 0, cursor[2]) #set y to 0 for the cursor, since we're putting the cursor on a single line
+                    if self.cursor == 'block':
+                        image = self.draw_block_cursor(newcursor, image)
+                    else:
+                        self.draw_line_cursor(newcursor, draw)
+
+                # rotate image if using landscape
+                if not portrait:
+                    image = image.rotate(90, expand=True)
+
+                # apply flips if desired
+                if flipx:
+                    image = image.transpose(Image.FLIP_LEFT_RIGHT)
+                if flipy:
+                    image = image.transpose(Image.FLIP_TOP_BOTTOM)
+                
+                #Add this image to the list of images to draw
+                #Note: x is currently hard-coded to 0, but it could be set to something else later if we implement partial line updates
+                imagesToDraw.append([0, y, image])
+                
+
+        #If oldimage is defined, update it by drawing the new frames onto it.
+        #If not, create a new full-screen image.
+        #In either case, don't actually draw the fullscreen image.
+        #We're only building it for the sake of returning a full-screen image as the return value
+        #of this function, so as to maintain compatibility with the showtext() method and the other
+        #logic which uses that image.
+        if not oldimage:
+            oldimage = Image.new('1', (self.driver.width, self.driver.height) if portrait else (self.driver.height, self.driver.width), self.white)
+        
+        for arr in imagesToDraw:
+            oldimage.paste(arr[2], (arr[0], arr[1])) #for the return data
+            self.driver.draw(arr[0], arr[1], arr[2])
+
+        return oldimage
     
     def clear(self):
         """Clears the display; set all black, then all white, or use INIT mode, if driver supports it."""
@@ -845,6 +998,8 @@ def terminal(settings, vcsa, font, fontsize, noclear, nocursor, cursor, sleep, t
                         # show new content
                         oldimage = ptty.showtext(buff, fill=ptty.black, cursor=cursor if not nocursor else None,
                                                 oldimage=oldimage,
+                                                oldtext=oldbuff,
+                                                oldcursor=oldcursor,
                                                 **textargs)
                         oldbuff = buff
                         oldcursor = cursor
