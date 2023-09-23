@@ -67,7 +67,8 @@ class IT8951(DisplayDriver):
     # gray scale color.
     DISPLAY_UPDATE_MODE_GC16 = 2
     # For more documentation on display update modes see the reference document:
-    # http://www.waveshare.net/w/upload/c/c4/E-paper-mode-declaration.pdf
+    # https://www.waveshare.com/w/upload/c/c4/E-paper-mode-declaration.pdf
+    DISPLAY_UPDATE_MODE_A2 = 6
 
     def __init__(self):
         super().__init__()
@@ -209,14 +210,14 @@ class IT8951(DisplayDriver):
                 lut_version,
         ) = struct.unpack(">HHHH16s16s", self.read_bytes(40))
         firmware_version = self.fixup_string(firmware_version)
-        lut_version = self.fixup_string(lut_version)
+        self.lut_version = self.fixup_string(lut_version)
         self.img_addr = img_addr_h << 16 | img_addr_l
 
         print("width = %d" % self.width)
         print("height = %d" % self.height)
         print("img_addr = %08x" % self.img_addr)
         print("firmware = %s" % firmware_version)
-        print("lut = %s" % lut_version)
+        print("lut = %s" % self.lut_version)
 
         # Ensure that the returned device info looks sane. If it doesn't, then
         # there is little chance that any of the other operations are going to
@@ -273,9 +274,39 @@ class IT8951(DisplayDriver):
         if update_mode_override is not None:
             update_mode = update_mode_override
         elif image.mode == "1":
-            # Use a faster, non-flashy update mode for pure black and white
-            # images.
-            update_mode = self.DISPLAY_UPDATE_MODE_DU
+            # Use a faster, non-flashy update mode for pure black and white images.
+            # Use A2 where possible. Otherwise default to DU mode.
+            # According to the docs here: https://www.waveshare.com/w/upload/c/c4/E-paper-mode-declaration.pdf
+            # A2 mode should be faster (120ms) than DU mode (260ms)
+
+            #6inch e-Paper HAT(800,600), 6inch HD e-Paper HAT(1448,1072), 6inch HD touch e-Paper HAT(1448,1072)
+            if len(self.lut_version) >= 4 and self.lut_version[:4] == "M641":
+            
+                #A2 mode is 4 instead of 6 for this model
+                self.DISPLAY_UPDATE_MODE_A2 = 4
+            
+                #This model requires four-byte alignment.
+                #Defaulting to DU mode until that has been implemented.
+                update_mode = self.DISPLAY_UPDATE_MODE_DU
+            
+            #9.7inch e-Paper HAT(1200,825)
+            elif len(self.lut_version) >= 4 and self.lut_version[:4] == "M841":
+                update_mode = self.DISPLAY_UPDATE_MODE_A2
+
+            #7.8inch e-Paper HAT(1872,1404)
+            elif len(self.lut_version) >= 12 and self.lut_version[:12] == "M841_TFA2812":
+                update_mode = self.DISPLAY_UPDATE_MODE_A2
+
+            #10.3inch e-Paper HAT(1872,1404)
+            elif len(self.lut_version) >= 12 and self.lut_version[:12] == "M841_TFA5210":
+                update_mode = self.DISPLAY_UPDATE_MODE_A2
+
+            #unknown model
+            else:
+                #It's PROBABLY safe to turn this to A2 instead of DU, but it would need a suitable test device.
+                #ie. A model not listed above.
+                update_mode = self.DISPLAY_UPDATE_MODE_DU
+
         else:
             # Use a slower, flashy update mode for gray scale images.
             update_mode = self.DISPLAY_UPDATE_MODE_GC16
