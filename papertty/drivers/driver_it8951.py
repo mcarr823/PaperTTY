@@ -25,7 +25,7 @@ class IT8951(DisplayDriver):
     BUSY_PIN = 24
 
     # My personal setting for VCM:
-    vcom = 2140
+    VCOM = 2140
     #VCOM = 2000
 
     CMD_GET_DEVICE_INFO = [0x03, 0x02]
