@@ -236,13 +236,15 @@ class IT8951(DisplayDriver):
 
             #A2 mode is 4 instead of 6 for this model
             self.DISPLAY_UPDATE_MODE_A2 = 4
-
-            #This model requires four-byte alignment.
-            #Don't enable a2 support until that has been implemented.
-            #self.supports_a2 = True
+            self.supports_a2 = True
 
         #9.7inch e-Paper HAT(1200,825)
         elif len(lut_version) >= 4 and lut_version[:4] == "M841":
+            self.supports_a2 = True
+
+        # Alternative for 6inch HD HAT(1448,1072)
+        elif len(lut_version) >= 12 and lut_version[:12] == "M841_TFAB512":
+            #A2 mode is still 6 for this version
             self.supports_a2 = True
 
         #7.8inch e-Paper HAT(1872,1404)
