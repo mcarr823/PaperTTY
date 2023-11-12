@@ -24,7 +24,9 @@ class IT8951(DisplayDriver):
     CS_PIN = 8
     BUSY_PIN = 24
 
-    VCOM = 2000
+    # Must be entered manually, project needs a config-file
+    # VCOM = 2000
+    VCOM = 2140
 
     CMD_GET_DEVICE_INFO = [0x03, 0x02]
     CMD_WRITE_REGISTER = [0x00, 0x11]
@@ -238,13 +240,15 @@ class IT8951(DisplayDriver):
             self.DISPLAY_UPDATE_MODE_A2 = 4
             self.supports_a2 = True
 
-        #9.7inch e-Paper HAT(1200,825)
-        elif len(lut_version) >= 4 and lut_version[:4] == "M841":
-            self.supports_a2 = True
-
         # Alternative for 6inch HD HAT(1448,1072)
         elif len(lut_version) >= 12 and lut_version[:12] == "M841_TFAB512":
-            #A2 mode is still 6 for this version
+            # A2 mode is still 6 for this version
+            # This elif may be unnecessairy, the same settings as below...
+            print("This is the right place to be.")
+            self.supports_a2 = True
+
+        #9.7inch e-Paper HAT(1200,825)
+        elif len(lut_version) >= 4 and lut_version[:4] == "M841":
             self.supports_a2 = True
 
         #7.8inch e-Paper HAT(1872,1404)
@@ -281,7 +285,7 @@ class IT8951(DisplayDriver):
         vcom = kwargs.get('vcom', None)
         if vcom:
             self.VCOM = vcom
-            
+
         if self.VCOM != self.get_vcom():
             self.set_vcom(self.VCOM)
             print("VCOM = -%.02fV" % (self.get_vcom() / 1000.0))
@@ -344,7 +348,7 @@ class IT8951(DisplayDriver):
             if not self.in_bpp1_mode:
                 self.write_register(self.REG_UP1SR+2, self.read_register(self.REG_UP1SR+2) | (1<<2) )
                 self.in_bpp1_mode = True
-            
+
             #Also write the black and white color table for 1bpp mode
             self.write_register(self.REG_BGVR, (self.Front_Gray_Val<<8) | self.Back_Gray_Val)
 
