@@ -249,14 +249,12 @@ class IT8951(DisplayDriver):
 
         #9.7inch e-Paper HAT(1200,825)
         elif len(lut_version) >= 4 and lut_version[:4] == "M841":
-            print("This is where we are")
             self.supports_a2 = True
 
         # Alternative for 6inch HD HAT(1448,1072)
         elif len(lut_version) >= 12 and lut_version[:12] == "M841_TFAB512":
             # A2 mode is still 6 for this version
             # This elif may be unnecessairy, the same settings as below...
-            print("This is the right place to be.")
             self.supports_a2 = True
 
         #7.8inch e-Paper HAT(1872,1404)
