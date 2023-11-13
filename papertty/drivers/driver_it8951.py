@@ -245,7 +245,6 @@ class IT8951(DisplayDriver):
             # A2 mode is still 6 for this version
             # This elif may be unnecessairy, the same settings as below...
             print("This is the right place to be.")
-            self.DISPLAY_UPDATE_MODE_A2 = 4
             self.supports_a2 = True
 
         #9.7inch e-Paper HAT(1200,825)
