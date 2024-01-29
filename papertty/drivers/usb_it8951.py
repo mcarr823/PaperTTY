@@ -142,7 +142,6 @@ class IT8951UsbDevice():
     def write_register_generic(self, address, command, data):
         length = len(data)
         byte_list = self.build_register_command(address, command, length)
-        bulk_data = [ *byte_list, *data ]
         self.write_command(byte_list, data, big=False)
 
     """
@@ -315,7 +314,7 @@ class IT8951UsbDevice():
         area = self.ints_to_bytes([address, x, y, w, h], big=True)
         command = self.LD_IMAGE_AREA_CMD
         self.write_command(command, area, extra_data = buffer, big = False)
-        #self.write_register_fast(address, buffer)
+        #self.write_register_fast(address-self.REG_ADJUST+1872*y, buffer)
 
     def display_area(self, x, y, w, h, display_mode):
         wait_ready = 1
