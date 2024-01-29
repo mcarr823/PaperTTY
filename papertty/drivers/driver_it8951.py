@@ -77,6 +77,8 @@ class IT8951(WaveshareEPD):
         self.align_1bpp_width = 32
         self.align_1bpp_height = 16
         self.supports_multi_draw = True
+        self.supports_usb = True
+        self.enable_usb = False
 
     def delay_ms(self, delaytime):
         time.sleep(float(delaytime) / 1000.0)

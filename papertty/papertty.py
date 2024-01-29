@@ -73,8 +73,9 @@ class PaperTTY:
     enable_a2 = True
     enable_1bpp = True
     mhz = None
+    enable_usb = False
 
-    def __init__(self, driver, font=defaultfont, fontsize=defaultsize, partial=None, encoding='utf-8', spacing=0, cursor=None, vcom=None, enable_a2=True, enable_1bpp=True, mhz=None):
+    def __init__(self, driver, font=defaultfont, fontsize=defaultsize, partial=None, encoding='utf-8', spacing=0, cursor=None, vcom=None, enable_a2=True, enable_1bpp=True, mhz=None, enable_usb=False):
         """Create a PaperTTY with the chosen driver and settings"""
         self.driver = get_drivers()[driver]['class']()
         self.spacing = spacing
@@ -89,6 +90,7 @@ class PaperTTY:
         self.enable_a2 = enable_a2
         self.enable_1bpp = enable_1bpp
         self.mhz = mhz
+        self.enable_usb = enable_usb
 
     def ready(self):
         """Check that the driver is loaded and initialized"""
@@ -246,7 +248,7 @@ class PaperTTY:
 
     def init_display(self):
         """Initialize the display - call the driver's init method"""
-        self.driver.init(partial=self.partial, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz)
+        self.driver.init(partial=self.partial, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz, enable_usb=self.enable_usb)
         self.initialized = True
 
     def fit(self, portrait=False):
@@ -1196,6 +1198,7 @@ def stdin(settings, font, fontsize, width, portrait, nofold, spacing, ttyrows, t
     settings.args['font'] = font
     settings.args['fontsize'] = fontsize
     settings.args['spacing'] = spacing
+    settings.args['enable_usb'] = False
     ptty = settings.get_init_tty()
     text = sys.stdin.read()
     if not nofold:
@@ -1237,6 +1240,7 @@ def image(settings, image_location, stretch, no_resize, fill_color, mirror, flip
     #Disable 1bpp and a2 by default if not using terminal mode
     settings.args['enable_a2'] = False
     settings.args['enable_1bpp'] = False
+    settings.args['enable_usb'] = False
 
     ptty = settings.get_init_tty()
     display_image(ptty.driver, image, stretch=stretch, no_resize=no_resize, fill_color=fill_color, rotate=rotate, mirror=mirror, flip=flip)
@@ -1257,6 +1261,7 @@ def vnc(settings, host, display, password, rotate, invert, sleep, fullevery):
     #Disable 1bpp and a2 by default if not using terminal mode
     settings.args['enable_a2'] = False
     settings.args['enable_1bpp'] = False
+    settings.args['enable_usb'] = False
 
     ptty = settings.get_init_tty()
     ptty.showvnc(host, display, password, int(rotate) if rotate else None, invert, sleep, fullevery)
@@ -1298,9 +1303,10 @@ def fb(settings, fb_num, rotate, invert, sleep, fullevery):
 @click.option('--disable_a2', is_flag=True, default=False, help='Disable fast A2 panel refresh for black and white images')
 @click.option('--disable_1bpp', is_flag=True, default=False, help='Disable fast 1bpp mode')
 @click.option('--mhz', default=None, help='Set SPI speed in MHz')
+@click.option('--usb', is_flag=True, default=False, help='Run the panel via USB instead of GPIO')
 @click.pass_obj
 def terminal(settings, vcsa, font, fontsize, noclear, nocursor, cursor, sleep, ttyrows, ttycols, portrait, flipx, flipy,
-             spacing, apply_scrub, autofit, attributes, interactive, vcom, disable_a2, disable_1bpp, mhz):
+             spacing, apply_scrub, autofit, attributes, interactive, vcom, disable_a2, disable_1bpp, mhz, usb):
     """Display virtual console on an e-Paper display, exit with Ctrl-C."""
     settings.args['font'] = font
     settings.args['fontsize'] = fontsize
@@ -1322,6 +1328,7 @@ def terminal(settings, vcsa, font, fontsize, noclear, nocursor, cursor, sleep, t
     
     settings.args['enable_a2'] = not disable_a2
     settings.args['enable_1bpp'] = not disable_1bpp
+    settings.args['enable_usb'] = usb
     
     if mhz:
         mhz = float(mhz)
@@ -1459,10 +1466,10 @@ def terminal(settings, vcsa, font, fontsize, noclear, nocursor, cursor, sleep, t
                 elif ch == 'r':
                     if oldimage:
                         ptty.driver.reset()
-                        ptty.driver.init(partial=False, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz)
+                        ptty.driver.init(partial=False, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz, enable_usb=self.enable_usb)
                         ptty.driver.draw(0, 0, oldimage)
                         ptty.driver.reset()
-                        ptty.driver.init(partial=ptty.partial, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz)
+                        ptty.driver.init(partial=ptty.partial, vcom=self.vcom, enable_a2=self.enable_a2, enable_1bpp=self.enable_1bpp, mhz=self.mhz, enable_usb=self.enable_usb)
 
             # if user or SIGUSR1 toggled the scrub flag, scrub display and start with a fresh image
             if flags['scrub_requested']:
