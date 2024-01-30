@@ -307,14 +307,17 @@ class IT8951UsbDevice():
             num_img_buf #11
         ]
 
-    def load_image_area(self, x, y, w, h, buffer):
+    def load_image_area(self, x, y, w, h, buffer, pitch):
         if len(buffer) > self.MAX_TRANSFER:
             raise ValueError("Buffer is too big")
         address = self.img_addr
-        area = self.ints_to_bytes([address, x, y, w, h], big=True)
-        command = self.LD_IMAGE_AREA_CMD
-        self.write_command(command, area, extra_data = buffer, big = False)
-        #self.write_register_fast(address-self.REG_ADJUST+1872*y, buffer)
+        if w == self.panel_width:
+            adjusted_address = address - self.REG_ADJUST + (pitch * y)
+            self.write_register_fast(adjusted_address, buffer)
+        else:
+            area = self.ints_to_bytes([address, x, y, w, h], big=True)
+            command = self.LD_IMAGE_AREA_CMD
+            self.write_command(command, area, extra_data = buffer, big = False)
 
     def display_area(self, x, y, w, h, display_mode):
         wait_ready = 1
