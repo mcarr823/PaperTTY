@@ -888,3 +888,396 @@ class EPD2in13v4(WavesharePartial):
             self.display_partial(self.cached_buffer, 0, 0, self.width, self.height)
         else:
             self.display_full(self.cached_buffer)
+
+class EPD2in9V2(WavesharePartial):
+    """Waveshare 2.9" V2 - monochrome"""
+
+    # GRAY1  = 0xff #white
+    # GRAY2  = 0xC0
+    # GRAY3  = 0x80 #gray
+    # GRAY4  = 0x00 #Blackest
+
+    # This is used after a normal WRITE_RAM (0x24) request in order to update
+    # the panel's base image.
+    WRITE_RAM2 = 0x26
+        
+    WF_PARTIAL_2IN9 = [
+        0x0,0x40,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x80,0x80,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x40,0x40,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x80,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0A,0x0,0x0,0x0,0x0,0x0,0x1,  
+        0x1,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x1,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x0,0x0,0x0,0x0,0x0,0x0,0x0,
+        0x22,0x22,0x22,0x22,0x22,0x22,0x0,0x0,0x0,
+        0x22,0x17,0x41,0xB0,0x32,0x36,
+    ]
+
+    WS_20_30 = [         
+        0x80, 0x66, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x0, 0x0, 0x0,
+        0x10, 0x66, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0,
+        0x80, 0x66, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x0, 0x0, 0x0,
+        0x10, 0x66, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x20, 0x0, 0x0, 0x0,
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        0x14, 0x8, 0x0, 0x0, 0x0, 0x0, 0x2,     
+        0xA, 0xA, 0x0, 0xA, 0xA, 0x0, 0x1,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x14, 0x8, 0x0, 0x1, 0x0, 0x0, 0x1,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,     
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, 0x0, 0x0, 0x0,   
+        0x22, 0x17, 0x41, 0x0, 0x32, 0x36
+    ]
+
+    Gray4 = [          
+        0x00, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
+        0x20, 0x60, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     
+        0x28, 0x60, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     
+        0x2A, 0x60, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,      
+        0x00, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,      
+        0x00, 0x02, 0x00, 0x05, 0x14, 0x00, 0x00,          
+        0x1E, 0x1E, 0x00, 0x00, 0x00, 0x00, 0x01,         
+        0x00, 0x02, 0x00, 0x05, 0x14, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,         
+        0x24, 0x22, 0x22, 0x22, 0x23, 0x32, 0x00, 0x00, 0x00,       
+        0x22, 0x17, 0x41, 0xAE, 0x32, 0x28,       
+    ] 
+
+    WF_FULL = [   
+        0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
+        0x19, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  
+        0x24, 0x42, 0x22, 0x22, 0x23, 0x32, 0x00, 0x00, 0x00,  
+        0x22, 0x17, 0x41, 0xAE, 0x32, 0x38
+    ]
+
+    def __init__(self):
+        super().__init__(name='2.9" V2 BW', width=128, height=296)
+        self.cached_buffer = None
+
+    # Hardware reset
+    def reset(self):
+        self.digital_write(self.RST_PIN, 1)
+        self.delay_ms(50)
+        self.digital_write(self.RST_PIN, 0)
+        self.delay_ms(2)
+        self.digital_write(self.RST_PIN, 1)
+        self.delay_ms(50)
+
+    def send_command(self, command):
+        self.digital_write(self.CS_PIN, 0)
+        super().send_command(command)
+        self.digital_write(self.CS_PIN, 1)
+
+    def send_data(self, data):
+        self.digital_write(self.CS_PIN, 0)
+        super().send_data(data)
+        self.digital_write(self.CS_PIN, 1)
+
+    # send a lot of data   
+    def send_data2(self, data):
+        self.digital_write(self.CS_PIN, 0)
+        super().send_data_multi(data)
+        self.digital_write(self.CS_PIN, 1)
+
+    def wait_until_idle(self):
+        while self.digital_read(self.BUSY_PIN) == 1:  # 0: idle, 1: busy
+            self.delay_ms(10)
+
+    def turn_on_display(self):
+        self.send_command(self.DISPLAY_UPDATE_CONTROL_2)
+        self.send_data(0xc7)
+        self.send_command(self.MASTER_ACTIVATION)
+        self.wait_until_idle()
+
+    def turn_on_display_partial(self):
+        self.send_command(self.DISPLAY_UPDATE_CONTROL_2)
+        self.send_data(0x0F)
+        self.send_command(self.MASTER_ACTIVATION)
+        self.wait_until_idle()
+
+    def set_lut(self, lut):
+        self.send_command(self.WRITE_LUT_REGISTER)
+        self.send_data2(lut[:153])
+        self.wait_until_idle()
+
+        self.send_command(0x3f)
+        self.send_data(lut[153])
+        self.send_command(0x03) # gate voltage
+        self.send_data(lut[154])
+        self.send_command(0x04) # source voltage
+        self.send_data(lut[155]) # VSH
+        self.send_data(lut[156]) # VSH2
+        self.send_data(lut[157]) # VSL
+        self.send_command(self.WRITE_VCOM_REGISTER)
+        self.send_data(lut[158])
+        
+    def init(self, partial=True, **kwargs):
+        
+        self.partial_refresh = partial
+        
+        if self.epd_init() != 0:
+            return -1
+
+        # EPD hardware init start     
+        self.reset()
+
+        self.wait_until_idle()
+        self.send_command(self.SW_RESET)
+        self.wait_until_idle() 
+
+        self.send_command(self.DRIVER_OUTPUT_CONTROL)
+        self.send_data2([0x27,0x01,0x00])
+    
+        self.send_command(self.DATA_ENTRY_MODE_SETTING)
+        self.send_data(0x03)
+
+        self.set_memory_area(0, 0, self.width-1, self.height-1)
+
+        self.send_command(self.DISPLAY_UPDATE_CONTROL_1)
+        self.send_data2([0x00,0x80])
+    
+        self.set_memory_pointer(0, 0)
+        self.wait_until_idle()
+
+        self.set_lut(self.WS_20_30)
+
+        # EPD hardware init end
+        return 0
+    
+    def init_fast(self, partial=True):
+        
+        self.partial_refresh = partial
+        
+        if self.epd_init() != 0:
+            return -1
+
+        # EPD hardware init start     
+        self.reset()
+
+        self.wait_until_idle()
+        self.send_command(self.SW_RESET)
+        self.wait_until_idle() 
+
+        self.send_command(self.DRIVER_OUTPUT_CONTROL)
+        self.send_data2([0x27,0x01,0x00])
+    
+        self.send_command(self.DATA_ENTRY_MODE_SETTING)
+        self.send_data(0x03)
+
+        self.set_memory_area(0, 0, self.width-1, self.height-1)
+
+        self.send_command(self.BORDER_WAVEFORM_CONTROL)   
+        self.send_data(0x05)
+
+        self.send_command(self.DISPLAY_UPDATE_CONTROL_1)
+        self.send_data2([0x00,0x80])
+    
+        self.set_memory_pointer(0, 0)
+        self.wait_until_idle()
+
+        self.set_lut(self.WF_FULL)
+
+        # EPD hardware init end
+        return 0
+    
+    def Init_4Gray(self, partial=True):
+        
+        self.partial_refresh = partial
+        
+        if self.epd_init() != 0:
+            return -1
+
+        self.reset()
+
+        self.delay_ms(100)
+
+        self.wait_until_idle()
+        self.send_command(self.SW_RESET)
+        self.wait_until_idle() 
+
+        self.send_command(self.DRIVER_OUTPUT_CONTROL)
+        self.send_data2([0x27,0x01,0x00])
+    
+        self.send_command(self.DATA_ENTRY_MODE_SETTING)
+        self.send_data(0x03)
+
+        self.set_memory_area(8, 0, self.width, self.height-1)
+
+        self.send_command(self.BORDER_WAVEFORM_CONTROL)
+        self.send_data(0x04)
+    
+        self.set_memory_pointer(1, 0)
+        self.wait_until_idle()
+
+        self.set_lut(self.Gray4)
+
+        # EPD hardware init end
+        return 0
+
+    def get_frame_buffer(self, image):
+        return bytearray(image.convert('1').tobytes('raw'))
+    
+    def get_frame_buffer_4Gray(self, image):
+        return self.pack_image(image.convert('L'))
+
+    def pack_image(self, image):
+        frame_buffer = list(image.getdata())
+        step = 4
+        packed_buffer = [0x00] * (len(frame_buffer) // step)
+        for i in range(0, len(frame_buffer), step):
+            self.pack_2bpp(packed_buffer, i // step, frame_buffer[i:i+step])
+        return packed_buffer
+
+    def pack_2bpp(self, packed_buffer, i, fourBytes):
+        packed_buffer[i] = \
+            (3 if fourBytes[0] else 0) | \
+            (12 if fourBytes[1] else 0) | \
+            (48 if fourBytes[2] else 0) | \
+            (192 if fourBytes[3] else 0)
+
+    def display_full(self, buffer):
+        self.send_command(self.WRITE_RAM)
+        self.send_data2(buffer)
+        self.turn_on_display()
+
+    def display_base(self, buffer):
+            
+        self.send_command(self.WRITE_RAM)
+        self.send_data2(buffer)
+                
+        self.send_command(self.WRITE_RAM2)
+        self.send_data2(buffer)   
+                
+        self.turn_on_display()
+        
+    def display_partial(self, buffer, x_start, y_start, x_end, y_end):
+            
+        self.digital_write(self.RST_PIN, 0)
+        self.delay_ms(2)
+        self.digital_write(self.RST_PIN, 1)
+        self.delay_ms(2)   
+        
+        self.set_lut(self.WF_PARTIAL_2IN9)
+        self.send_command(0x37)
+        self.send_data2([0x00,0x00,0x00,0x00,0x00,0x40,0x00,0x00,0x00,0x00])
+
+        self.send_command(self.BORDER_WAVEFORM_CONTROL)
+        self.send_data(0x80)
+
+        self.send_command(self.DISPLAY_UPDATE_CONTROL_2)
+        self.send_data(0xC0)
+        self.send_command(self.MASTER_ACTIVATION)
+        self.wait_until_idle()
+
+        # self.set_memory_area(0, 0, self.width - 1, self.height - 1)
+        # self.set_memory_pointer(0, 0)
+        self.set_memory_area(x_start, y_start, x_end - 1, y_end - 1)
+        self.set_memory_pointer(x_start, y_start)
+        
+        self.send_command(self.WRITE_RAM)
+        self.send_data2(buffer)
+        self.turn_on_display_partial()
+
+    def draw(self, x, y, image):
+        """Replace a particular area on the display with an image"""
+
+        if self.cached_buffer is None:
+            self.cached_buffer = [0xFF] * int(self.height * self.width//8)
+
+            # If partial refresh is enabled, write the initial image to the
+            # appropriate register.
+            # This is optional for full refreshes, but it is required for
+            # partial refresh.
+            if self.partial_refresh:
+                self.display_base(self.cached_buffer)
+
+        # Now build the new buffer.
+        # We do this by converting the image to a byte array, then replacing
+        # the bytes in the cache with the bytes from the new array in the
+        # appropriate positions.
+        # This isn't as "pretty" as pasting the image over the old one and
+        # converting the whole thing, but it is more efficient.
+        new_buffer = self.get_frame_buffer(image)
+        width = image.width
+        width_bytes = width // 8
+        panel_width_bytes = self.width // 8
+        height = image.height
+        for h in range(0, height):
+            src_start = h * width_bytes
+            src_end = src_start + width_bytes
+            dst_start = (y+h) * panel_width_bytes + (x // 8)
+            dst_end = dst_start + width_bytes
+            self.cached_buffer[dst_start:dst_end] = new_buffer[src_start:src_end]
+
+        bpp = 1
+        if bpp == 2:
+            # base instead of full. idk why
+            self.display_base(self.get_frame_buffer_4Gray(image))
+        else:
+            #fb = self.get_frame_buffer(image)
+            if self.partial_refresh:
+                #self.display_partial(fb, x, y, x + image.width, x + image.height)
+                self.display_partial(self.cached_buffer, 0, 0, self.width, self.height)
+            else:
+                self.display_full(self.cached_buffer)
+
+
+    def clear(self):
+        if self.width%8 == 0:
+            linewidth = int(self.width/8)
+        else:
+            linewidth = int(self.width/8) + 1
+
+        white_frame = [0xFF] * int(self.height * linewidth)
+
+        self.send_command(self.WRITE_RAM)
+        self.send_data2(white_frame)
+        self.turn_on_display()
+
+        self.send_command(self.WRITE_RAM2)
+        self.send_data2(white_frame)
+        self.turn_on_display()
+
+    def sleep(self):
+        self.send_command(self.DEEP_SLEEP_MODE)
+        self.send_data(0x01)
+        self.delay_ms(2000)
