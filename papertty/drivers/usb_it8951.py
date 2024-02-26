@@ -1,5 +1,7 @@
 # This code has partially been adapted from https://github.com/faassen/rust-it8951
 # and https://github.com/blahgeek/rabbitink
+# Per https://www.waveshare.com/w/upload/c/c9/IT8951_USB_ProgrammingGuide_v.0.4_20161114.pdf
+
 
 try:
     from usb.core import find as find_usb
@@ -20,6 +22,8 @@ class IT8951UsbDevice():
     MAX_TRANSFER = (60 * 1024) - 20
 
     INQUIRY_CMD = [18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    # 254 = 0xFE = "Customer Command"
     GET_SYS_CMD = [254, 0, 56, 57, 53, 49, 128, 0, 1, 0, 2, 0, 0, 0, 0, 0]
     LD_IMAGE_AREA_CMD = [254, 0, 0, 0, 0, 0, 162, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     DPY_AREA_CMD = [254, 0, 0, 0, 0, 0, 148, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -132,6 +136,10 @@ class IT8951UsbDevice():
     def write_register(self, address, data):
         self.write_register_generic(address, 130, data)
 
+    """
+        Note that this only works for full-width images
+        It also only works if you're using firmware v.0.4
+    """
     def write_register_fast(self, address, data):
         self.write_register_generic(address, 165, data)
 
@@ -291,6 +299,7 @@ class IT8951UsbDevice():
         # print("Mode: "+str(mode))
 
         self.img_addr = image_buffer_base
+        self.panel_width = width
 
         return [
             standard_cmd_no, #0
@@ -312,7 +321,7 @@ class IT8951UsbDevice():
             raise ValueError("Buffer is too big")
         address = self.img_addr
         if w == self.panel_width:
-            adjusted_address = address - self.REG_ADJUST + (pitch * y)
+            adjusted_address = address - self.REG_ADJUST + int(pitch * y)
             self.write_register_fast(adjusted_address, buffer)
         else:
             area = self.ints_to_bytes([address, x, y, w, h], big=True)
