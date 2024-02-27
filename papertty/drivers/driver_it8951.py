@@ -7,6 +7,10 @@ from papertty.drivers.drivers_base import WaveshareEPD
 from papertty.drivers.drivers_base import GPIO
 from papertty.drivers.drivers_base import SpiDev
 
+try:
+    from papertty.drivers.usb_it8951 import IT8951UsbDevice
+except Exception as e:
+    pass
 
 class IT8951(WaveshareEPD):
     """A generic driver for displays that use a IT8951 controller board.
@@ -31,6 +35,7 @@ class IT8951(WaveshareEPD):
     REG_LUTAFSR = REG_DISPLAY_BASE + 0x224 # LUT Status Reg (status of All LUT Engines)
     REG_UP1SR = REG_DISPLAY_BASE + 0x138 #Update Parameter1 Setting Reg
     REG_BGVR = REG_DISPLAY_BASE + 0x250 #Bitmap (1bpp) image color table
+    REG_WIDTH = REG_DISPLAY_BASE + 0x24C
 
     REG_MEMORY_CONV_BASE_ADDR = 0x0200
     REG_MEMORY_CONV = REG_MEMORY_CONV_BASE_ADDR + 0x0000
@@ -78,7 +83,6 @@ class IT8951(WaveshareEPD):
         self.align_1bpp_height = 16
         self.supports_multi_draw = True
         self.supports_usb = True
-        self.enable_usb = False
 
     def delay_ms(self, delaytime):
         time.sleep(float(delaytime) / 1000.0)
@@ -147,6 +151,11 @@ class IT8951(WaveshareEPD):
 
         When the busy pin is high the controller is busy and may drop any
         commands that are sent to it."""
+
+        # Doesn't apply to USB mode
+        if self.USB:
+            return
+
         while GPIO.input(self.BUSY_PIN) == 0:
             self.delay_ms(100)
 
@@ -156,19 +165,29 @@ class IT8951(WaveshareEPD):
         It is possible for the controller to be ready for more commands but the
         display to still be refreshing. This will wait for the display to be
         stable."""
-        while self.read_register(self.REG_LUTAFSR) != 0:
-            self.delay_ms(100)
+
+        if self.USB:
+            while self.USB.read_register(self.REG_LUTAFSR, 2) != bytearray([0,0]):
+                self.delay_ms(100)
+        else:
+            while self.read_register(self.REG_LUTAFSR) != 0:
+                self.delay_ms(100)
 
     def get_vcom(self):
+        if self.USB:
+            return 2000 #TODO
         self.wait_for_ready()
         self.write_command(self.CMD_VCOM)
         self.write_data_half_word(0)
         return self.read_half_word()
 
     def set_vcom(self, vcom):
-        self.write_command(self.CMD_VCOM)
-        self.write_data_half_word(1)
-        self.write_data_half_word(vcom)
+        if self.USB:
+            self.USB.set_vcom(vcom)
+        else:
+            self.write_command(self.CMD_VCOM)
+            self.write_data_half_word(1)
+            self.write_data_half_word(vcom)
 
     def fixup_string(self, s):
         result = ""
@@ -180,49 +199,93 @@ class IT8951(WaveshareEPD):
         return result
 
     def init(self, **kwargs):
-        if self.epd_init(includeDcPin=False) != 0:
-            return -1
 
-        mhz = kwargs.get('mhz', None)
-        if mhz:
-            self.SPI.max_speed_hz = int(mhz * 1000000)
+        enable_usb = kwargs.get('enable_usb', False)
+        if enable_usb:
+            self.USB = IT8951UsbDevice(0x048d, 0x8951)
+            panel_values = self.USB.get_system_info()
+            self.width = panel_values[4]
+            self.height = panel_values[5]
+            self.img_addr = panel_values[7]
+            mode_no = panel_values[9]
+
+            # This effectively forces full-width drawing
+            self.align_1bpp_width = self.width
+
+            # We can't actually retrieve the LUT version via USB,
+            # as far as I can tell. But it shouldn't be needed anyway.
+            # The only important bit is whether there are 8 display modes or 6.
+            # If there are 8 modes, pretend to be an M841 panel.
+            # If there are 6 modes, pretend to be an M641 panel.
+            # If there's some other number, use the default behavior.
+            if mode_no == 8:
+                lut_version = "M841"
+            elif mode_no == 6:
+                lut_version = "M641"
+            else:
+                lut_version = "UNKNOWN"
+
+            # This isn't actually used anywhere. It's just a string that's
+            # printed on startup.
+            # I can't see a way to retrieve this via USB, so let's just fake
+            # it for now.
+            firmware_version = "1.0.0"
+
         else:
-            self.SPI.max_speed_hz = 2000000
-        print("SPI Speed = %.02f Mhz" % (self.SPI.max_speed_hz / 1000.0 / 1000.0))
-        
-        # It is unclear why this is necessary but it appears to be. The sample
-        # code from WaveShare [1] manually controls the CS bin and has its state
-        # span multiple SPI operations.
-        #
-        # [1] https://github.com/waveshare/IT8951
-        self.SPI.setNoCs(True)
 
-        GPIO.output(self.CS_PIN, GPIO.HIGH)
+            if self.epd_init(includeDcPin=False) != 0:
+                return -1
 
-        # Reset the device to its initial state.
-        GPIO.output(self.RST_PIN, GPIO.LOW)
-        self.delay_ms(500)
-        GPIO.output(self.RST_PIN, GPIO.HIGH)
-        self.delay_ms(500)
+            mhz = kwargs.get('mhz', None)
+            if mhz:
+                self.SPI.max_speed_hz = int(mhz * 1000000)
+            else:
+                self.SPI.max_speed_hz = 2000000
+            print("SPI Speed = %.02f Mhz" % (self.SPI.max_speed_hz / 1000.0 / 1000.0))
+            
+            # It is unclear why this is necessary but it appears to be. The sample
+            # code from WaveShare [1] manually controls the CS bin and has its state
+            # span multiple SPI operations.
+            #
+            # [1] https://github.com/waveshare/IT8951
+            self.SPI.setNoCs(True)
 
-        self.write_command(self.CMD_GET_DEVICE_INFO);
+            GPIO.output(self.CS_PIN, GPIO.HIGH)
 
-        (
-                self.width,
-                self.height,
-                img_addr_l,
-                img_addr_h,
-                firmware_version,
-                lut_version,
-        ) = struct.unpack(">HHHH16s16s", self.read_bytes(40))
-        firmware_version = self.fixup_string(firmware_version)
-        lut_version = self.fixup_string(lut_version)
-        self.img_addr = img_addr_h << 16 | img_addr_l
+            # Reset the device to its initial state.
+            GPIO.output(self.RST_PIN, GPIO.LOW)
+            self.delay_ms(500)
+            GPIO.output(self.RST_PIN, GPIO.HIGH)
+            self.delay_ms(500)
+
+            self.write_command(self.CMD_GET_DEVICE_INFO);
+
+            (
+                    self.width,
+                    self.height,
+                    img_addr_l,
+                    img_addr_h,
+                    firmware_version,
+                    lut_version,
+            ) = struct.unpack(">HHHH16s16s", self.read_bytes(40))
+
+            self.img_addr = img_addr_h << 16 | img_addr_l
+            firmware_version = self.fixup_string(firmware_version)
+            lut_version = self.fixup_string(lut_version)
 
         self.in_bpp1_mode = False
         self.enable_1bpp = kwargs.get('enable_1bpp', self.enable_1bpp)
         self.supports_a2 = False
         self.enable_a2 = kwargs.get('enable_a2', True)
+
+        # The USB driver is in 1bpp mode by default.
+        # So if 1bpp is enabled, set in_bpp1_mode to True.
+        # If not, set the driver to 8bpp mode instead.
+        if self.USB:
+            if self.enable_1bpp:
+                self.in_bpp1_mode = True
+            else:
+                self.USB.set_bpp(8)
 
         #6inch e-Paper HAT(800,600), 6inch HD e-Paper HAT(1448,1072), 6inch HD touch e-Paper HAT(1448,1072)
         if len(lut_version) >= 4 and lut_version[:4] == "M641":
@@ -267,7 +330,8 @@ class IT8951(WaveshareEPD):
         assert self.height != 0
 
         # Set to Enable I80 Packed mode.
-        self.write_register(self.REG_I80CPCR, 0x0001)
+        if not enable_usb:
+            self.write_register(self.REG_I80CPCR, 0x0001)
 
         vcom = kwargs.get('vcom', None)
         if vcom:
@@ -281,9 +345,14 @@ class IT8951(WaveshareEPD):
         self.wait_for_ready()
         self.clear()
 
-        if self.enable_1bpp:
-            #Adjust screen size to accommodate bounding in 1bpp mode
-            #Do this AFTER clearing the screen
+        if self.enable_1bpp and not enable_usb:
+            
+            # Adjust screen size to accommodate bounding in 1bpp mode.
+            # Do this AFTER clearing the screen.
+            # Also, don't do this with USB mode, since USB mode forces
+            # the 1bpp alignment to be the full width of the screen instead
+            # of applying bounding.
+
             self.width -= (self.width % self.align_1bpp_width)
             self.height -= (self.height % self.align_1bpp_height)
 
@@ -342,6 +411,20 @@ class IT8951(WaveshareEPD):
         #If this is the first (or only) image to draw, prepare the display.
         if isFirst:
             self.wait_for_display_ready()
+
+        if self.USB:
+            if bbox:
+                (left, top, right, bottom) = bbox
+                w = right-left
+                h = bottom-top
+                base_x = left
+                base_y = top
+            else:
+                (base_x, base_y, w, h) = (x, y, width, height)
+            self.USB.draw(image, x, y, refresh=False)
+            if isLast:
+                self.USB.display_area(x = base_x, y = base_y, w = w, h = h)
+            return
 
         #Set to 4bpp by default
         bpp = 4
@@ -449,7 +532,10 @@ class IT8951(WaveshareEPD):
 
     def clear(self):
         image = Image.new('1', (self.width, self.height), self.white)
-        self.draw(0, 0, image, self.DISPLAY_UPDATE_MODE_INIT)
+        if self.USB:
+            self.USB.draw(image, 0, 0, display_mode = self.USB.INIT)
+        else:
+            self.draw(0, 0, image, self.DISPLAY_UPDATE_MODE_INIT)
 
     def pack_image(self, image, bpp):
         """Packs a PIL image for transfer over SPI to the driver board."""

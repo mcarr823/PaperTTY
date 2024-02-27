@@ -1350,6 +1350,10 @@ def terminal(settings, vcsa, font, fontsize, noclear, nocursor, cursor, sleep, t
 
     ptty = settings.get_init_tty()
 
+    if usb and not ptty.driver.supports_usb:
+        print("This panel does not support USB mode")
+        sys.exit(1)
+
     if apply_scrub:
         ptty.driver.scrub()
     oldbuff = ''
