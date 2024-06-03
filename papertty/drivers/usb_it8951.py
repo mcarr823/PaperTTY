@@ -84,7 +84,10 @@ class IT8951UsbDevice():
         ]
 
     def read(self, length):
-        return self.endpoint_in.read(length)
+        # 10 second timeout.
+        # This is overkill, but the default is way too short
+        timeout = 10000
+        return self.endpoint_in.read(length, timeout)
 
     def write(self, byte_list):
         return self.endpoint_out.write(bytes(byte_list))
