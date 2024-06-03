@@ -1255,14 +1255,15 @@ def image(settings, image_location, stretch, no_resize, fill_color, mirror, flip
 @click.option('--invert', default=False, is_flag=True, help="Invert colors")
 @click.option('--sleep', default=1, show_default=True, help="Refresh interval (s)", type=float)
 @click.option('--fullevery', default=50, show_default=True, help="# of partial updates between full updates")
+@click.option('--usb', is_flag=True, default=False, help='Run the panel via USB instead of GPIO')
 @click.pass_obj
-def vnc(settings, host, display, password, rotate, invert, sleep, fullevery):
+def vnc(settings, host, display, password, rotate, invert, sleep, fullevery, usb):
     """Display a VNC desktop"""
     
     #Disable 1bpp and a2 by default if not using terminal mode
     settings.args['enable_a2'] = False
     settings.args['enable_1bpp'] = False
-    settings.args['enable_usb'] = False
+    settings.args['enable_usb'] = usb
 
     ptty = settings.get_init_tty()
     ptty.showvnc(host, display, password, int(rotate) if rotate else None, invert, sleep, fullevery)
