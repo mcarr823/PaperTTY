@@ -1192,13 +1192,14 @@ def scrub(settings, size):
 @click.option('--cols', 'ttycols', default=None, help='Set TTY columns (--rows required too)')
 @click.option('--flipx', default=False, is_flag=True, help='Flip X axis (EXPERIMENTAL/BROKEN)', show_default=False)
 @click.option('--flipy', default=False, is_flag=True, help='Flip Y axis (EXPERIMENTAL/BROKEN)', show_default=False)
+@click.option('--usb', is_flag=True, default=False, help='Run the panel via USB instead of GPIO')
 @click.pass_obj
-def stdin(settings, font, fontsize, width, portrait, nofold, spacing, ttyrows, ttycols, flipx, flipy):
+def stdin(settings, font, fontsize, width, portrait, nofold, spacing, ttyrows, ttycols, flipx, flipy, usb):
     """Display standard input and leave it on screen"""
     settings.args['font'] = font
     settings.args['fontsize'] = fontsize
     settings.args['spacing'] = spacing
-    settings.args['enable_usb'] = False
+    settings.args['enable_usb'] = usb
     ptty = settings.get_init_tty()
     text = sys.stdin.read()
     if not nofold:
