@@ -1273,9 +1273,11 @@ def vnc(settings, host, display, password, rotate, invert, sleep, fullevery):
 @click.option('--invert', default=False, is_flag=True, help="Invert colors")
 @click.option('--sleep', default=1, show_default=True, help="Refresh interval (s)", type=float)
 @click.option('--fullevery', default=50, show_default=True, help="# of partial updates between full updates")
+@click.option('--usb', is_flag=True, default=False, help='Run the panel via USB instead of GPIO')
 @click.pass_obj
-def fb(settings, fb_num, rotate, invert, sleep, fullevery):
+def fb(settings, fb_num, rotate, invert, sleep, fullevery, usb):
     """Display the framebuffer"""
+    settings.args['enable_usb'] = usb
     ptty = settings.get_init_tty()
     ptty.showfb(int(fb_num), int(rotate) if rotate else None, invert, sleep, fullevery)
 
