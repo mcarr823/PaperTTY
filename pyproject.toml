@@ -9,11 +9,13 @@ homepage = "https://github.com/joukos/PaperTTY"
 
 [tool.poetry.dependencies]
 click = "^7.1.2"
-Pillow = "7.1.2"
-python = "^3.5"
-"RPi.GPIO" = "^0.7.0"
-spidev = "^3.4"
-vncdotool = "^1.0.0"
+Pillow = "10.4.0"
+python = "^3.9"
+gpiozero = "^2.0.0"
+lgpio    = "^0.2.0.0"
+"RPi.GPIO" = "^0.7.1"
+spidev = "^3.6"
+vncdotool = "^1.2.0"
 
 [tool.poetry.scripts]
 papertty = "papertty.papertty:cli"

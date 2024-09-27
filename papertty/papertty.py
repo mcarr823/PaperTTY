@@ -151,7 +151,7 @@ class PaperTTY:
     
     def vcsudev(self, vcsa):
         """Return character width and associated vcs(u) for vcsa device,
-           ie. for /dev/vcsa1, retunr (4, "/dev/vcsu1") if vcsu is available, or
+           ie. for /dev/vcsa1, return (4, "/dev/vcsu1") if vcsu is available, or
            (1, "/dev/vcs1") if not"""
         dev = vcsa.replace("vcsa", "vcsu")
         if os.path.exists(dev):
@@ -228,7 +228,10 @@ class PaperTTY:
         """Load the PIL or TrueType font"""
         # get physical dimensions of font. Take the average width of
         # 1000 M's because oblique fonts a complicated.
-        self.font_width = font.getsize('M' * 1000)[0] // 1000
+        ll, tt, rr, bb = font.getbbox('M')
+        #ww = (((rr * 1000) - (ll * 1000)) // 1000)
+        hh = bb - tt
+        self.font_height = hh 
         if 'getmetrics' in dir(font):
             metrics_ascent, metrics_descent = font.getmetrics()
             self.spacing = int(self.spacing) if self.spacing != 'auto' else (metrics_descent - 2)
@@ -242,7 +245,10 @@ class PaperTTY:
             self.spacing = int(self.spacing) if self.spacing != 'auto' else 0
             # pil fonts don't seem to have metrics, but all
             # characters seem to have the same height
-            self.font_height = font.getsize('a')[1] + self.spacing
+            ll, tt, rr, bb = font.getbbox('A')
+            #ww = (((rr * 1000) - (ll * 1000)) // 1000)
+            hh = bb - tt
+            self.font_height = hh + self.spacing
 
     def init_display(self):
         """Initialize the display - call the driver's init method"""
@@ -1202,7 +1208,11 @@ def stdin(settings, font, fontsize, width, portrait, nofold, spacing, ttyrows, t
         if width:
             text = ptty.fold(text, width)
         else:
-            font_width = ptty.font.getsize('M')[0]
+            ll, tt, rr, bb = ptty.font.getbbox('M')
+            ww = (((rr * 1000) - (ll * 1000)) // 1000)
+            hh = bb - tt
+            font_height = hh
+            font_width = ww
             max_width = int((ptty.driver.width - 8) / font_width) if portrait else int(ptty.driver.height / font_width)
             text = ptty.fold(text, width=max_width)
     if ttyrows:
